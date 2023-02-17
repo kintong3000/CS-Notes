@@ -910,6 +910,16 @@ row format delimited
 fields terminated by '\t'
 lines terminated by '\n'
 stored as textfile;
+4:create table as //只是复制原数据，其实就是把查询的结果建一个表
+例如：
+create table arr_temp
+as
+select name,cj from arr2 lateral view explode(scores) score as cj;
+
+5:create table like //产生与源表相同的表结构，包括索引和主键，数据需要用insert into 语句复制进去。
+例如：
+create table newtest like test；
+insert into newtest select * from test；
 ```
 
 ```
@@ -1778,7 +1788,7 @@ scores array<String>
 )
 row format delimited 
 fields terminated by '\t'
-collection items terminated by ','
+collection items terminated by ','//数组元素之间的分隔
 ;
 
 load data local inpath './data/arr1.txt' into table arr1;
@@ -1793,6 +1803,7 @@ select name,scores[1] from arr2 where size(scores) > 3;
 
 --统计arr2中的每个人的总成绩
 select scores[0]+scores[1]+nvl(scores[2],0)+nvl(scores[3],0) from arr2;
+//nvl(,) 相当于mysql中的if else ，若前面的值为空则取后面的值
 ```
 
 7.2.4  想要一种效果：也就是将数组类型的数据元素展开，换句话说，就是列转行
@@ -1832,12 +1843,12 @@ lisi	94
 ```mysql
 - select explode(score) score from arr2;
 
-- select name,cj from arr2  lateral view explode(scores) mytable as cj;
+- select name,cj from arr2  lateral view  ;
 
 
 - 统计每个学生的总成绩：
 select name,sum(cj) as totalscore from arr2 lateral view explode(scores) mytable as cj 
-group by name;
+group by name;//mytable为给虚拟表取得名字
 ```
 
 7.3.3 需求：向array字段中动态加载数据，不直接load加载，而是insert。
@@ -1850,7 +1861,7 @@ as
 select name,cj from arr2 lateral view explode(scores) score as cj;
 ```
 
-7.3.3.2 借助collect_set函数，列转行函数，有去重效果。collect_list函数没有去重效果
+7.3.3.2 借助**collect_set函数**，列转行函数，有**去重效果**。**collect_list函数没有去重效果**
 
 ```mysql
 drop table arr3;
@@ -2161,7 +2172,7 @@ desc function functionName;
 
 ```mysql
 格式：unix_timestamp([date[,pattern]])
-案例：
+案例： 
 select unix_timestamp('1970-01-01 0:0:0'); -- 传入的日期时间是东八区的时间， 返回值是相对于子午线的时间来说的
 select unix_timestamp('1970-01-01 8:0:0'); 
 select unix_timestamp('0:0:0 1970-01-01',"HH:mm:ss yyyy-MM-dd"); 
@@ -2276,7 +2287,8 @@ concat_ws --（指定分隔符）
 select concat_ws('-','a' ,'b','c');
 
 substr--（求子串）
-select substr('abcde',3);
+select substr('abcde',3);//截取第三个及以后的字符串
+select substr('abcde',3,6);//截取第三个到第六个的字符串
 
 split(str,regex)--切分字符串，返回数组。
 select split("a-b-c-d-e-f","-");
@@ -2470,7 +2482,9 @@ tony    2018-01-02      15      94
 
 #### 8.2.4 sort by子句
 
- sort by子句会让输入的数据强制排序 （强调：当使用排序时，窗口会在组内逐行变大）
+如果reduce只有一个的话，那么sort by 和 order by的功能就是一样的，都是对全局进行一个排序，如果reduce的个数多余1个的话，作用就不一样了。sort by如果有两个reuce,那么查询集会分到两个reduce里面。分别在每一个reduce里面进行局部排序，最后将局部排序后的数据汇总起来，这样可以提高全局排序的效率。
+
+ sort by子句会让输入的数据强制排序 （强调：当使用排序时，窗口会在组内逐行变大，即第一行对应的窗口只有第一行，第二行窗口两行）
 
 ```
 语法：  over([distribute by colname] [sort by colname [desc|asc]])
@@ -2481,22 +2495,6 @@ tony    2018-01-02      15      94
 ```mysql
 select name, orderdate, cost, 
 sum(cost) over (distribute by name, month(orderdate) sort by orderdate desc)
-from t_order;
-```
-
-<font color="red">**注意**</font>：可以使用partition by + order by 组合来代替distribute by+sort by组合
-
-```mysql
-select name, orderdate, cost, 
-sum(cost) over (partition by name, month(orderdate) order by orderdate desc)
-from t_order;
-```
-
-注意：也可以在窗口函数中，只写排序，窗口大小是全表记录。
-
-```mysql
-select name, orderdate, cost, 
-sum(cost) over (order by orderdate desc)
 from t_order;
 
 neil    2018-06-12      80      80				-统计信息会逐行增加
@@ -2513,6 +2511,23 @@ saml    2018-01-05      46      607
 tony    2018-01-04      29      636
 tony    2018-01-02      15      651
 saml    2018-01-01      10      661
+```
+
+<font color="red">**注意**</font>：可以使用**partition by + order by 组合**来代替**distribute by+sort by组合**，只有这两个组合
+
+```mysql
+select name, orderdate, cost, 
+sum(cost) over (partition by name, month(orderdate) order by orderdate desc)
+from t_order;
+```
+
+注意：也可以在窗口函数中，只写排序，窗口大小是全表记录。
+
+```mysql
+select name, orderdate, cost, 
+sum(cost) over (order by orderdate desc)
+from t_order;
+
 ```
 
 
@@ -2670,7 +2685,7 @@ from tablename where  dt-lag(dt,100) over(partition by id order by dt)<5分钟
 #### 8.3.3 first_value和last_value
 
 - first_value  取分组内排序后，截止到当前行，第一个值 
-- last_value  分组内排序后，截止到当前行，最后一个值 
+- last_value  分组内排序后，截止到当前行，最后一个值  就是当前行
 
 案例:
 
