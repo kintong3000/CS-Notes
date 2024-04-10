@@ -58,7 +58,6 @@ app.mount('#app')
   <!-- 修饰符 -->
 	<input type="text" v-model.trim="inputValue"> <!-- 去除两边空格 -->
 
-  
 </div>
 
 <script>
@@ -123,7 +122,37 @@ app.mount('#app')
 
 
 
-### script setup
+### 选项式
+
+``` javascript
+<script>
+export default {
+  data() {
+    return {}
+  },
+
+  computed: {},
+
+  watch: {},
+
+  created() {
+
+  },
+
+  mounted() {
+
+  },
+
+  methods: {}
+}
+</script>
+```
+
+
+
+
+
+### 组合式script setup
 
 ``` vue
 <script>
@@ -174,12 +203,6 @@ function increment() {
   </button>
 </template>
 ```
-
-
-
-
-
-
 
 
 
@@ -514,6 +537,52 @@ onMounted(() => {
 
 Props 是一种特别的 attributes，你可以在组件上声明注册。
 
+在使用 `<script setup>` 的单文件组件中，props 可以使用 `defineProps()` 宏来声明：
+
+```vue
+<script setup>
+const props = defineProps(['foo'])
+
+console.log(props.foo)
+</script>
+```
+
+在没有使用 `<script setup>` 的组件中，prop 可以使用 [`props`](https://cn.vuejs.org/api/options-state.html#props) 选项来声明：
+
+```js
+export default {
+  props: ['foo'],
+  setup(props) {
+    // setup() 接收 props 作为第一个参数
+    console.log(props.foo)
+  }
+}
+```
+
+注意传递给 `defineProps()` 的参数和提供给 `props` 选项的值是相同的，两种声明方式背后其实使用的都是 prop 选项。
+
+除了使用字符串数组来声明 prop 外，还可以使用对象的形式：
+
+js
+
+```js
+// 使用 <script setup>
+defineProps({
+  title: String,
+  likes: Number
+})
+```
+
+```js
+// 非 <script setup>
+export default {
+  props: {
+    title: String,
+    likes: Number
+  }
+}
+```
+
 ```vue
 <!-- BlogPost.vue -->
 <script setup>
@@ -767,7 +836,7 @@ defineEmits(['enlarge-text'])
 
 入门
 
-```
+```vue
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://unpkg.com/vue-router@4"></script>
 

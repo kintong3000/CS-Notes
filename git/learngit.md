@@ -1,6 +1,6 @@
 #### 常用命令
 
-```git
+```shell
 git init  //在文件夹目录下执行，通过git init命令把这个目录变成Git可以管理的仓库
 git add	<file>	//把文件添加到版本库
 git add .		//添加当前目录下的所有文件到暂存区
@@ -28,6 +28,7 @@ git branch <name>		//创建分支
 git checkout <name>或者git switch <name>		//切换分支
 git checkout -b <name>或者git switch -c <name>		//创建+切换分支
 git merge <name>		//合并某分支到当前分支 先切换到main，再合并develop分支
+git merge --abort		//在解决冲突的过程中不确定如何处理，可以随时使用以下命令取消合并操作
 git branch -d <name>		//删除分支
 git log --graph		//有分支图
 git merge --no-ff -m "commit描述" <name>		//在merge时生成一个新的commit
@@ -38,12 +39,12 @@ git branch -D <name>		//强制删除分支，-d为普通
 git push -u origin <Branches>		//推送某分支的所有内容，-u表示建立链接，之后可以直接写成git push
 git pull		//拉取分支内容
 git branch --set-upstream branch-name origin/branch-name		//建立本地分支和远程分支的关联
-
+git rebase 
 git checkout -b my-test  //在当前分支下创建my-test的本地分支分支
 git push origin my-test  //将my-test分支推送到远程
 git branch --set-upstream-to=origin/my-test //将本地分支my-test关联到远程分支my-test上   
 git branch -a //查看远程分支 
-
+git checkout -b dev origin/dev //用于在本地创建一个名为 dev 的新分支，并将其设置为跟踪（track）远程仓库的 origin/dev 分支。
 ```
 
 #### 版本回溯
@@ -62,7 +63,7 @@ git branch -a //查看远程分支
 
 Git的版本库里存了很多东西，其中最重要的就是称为`stage`（或者叫index）的暂存区，还有Git为我们自动创建的第一个分支`master`，以及指向`master`的一个指针叫`HEAD`。
 
-![git-repo](learngit.assets/0.jpeg)
+![git-repo](https://cdn.jsdelivr.net/gh/kintong3000/Kintong-Image-Hosting@main/img/0.jpeg)
 
 我们把文件往Git版本库里添加的时候，是分两步执行的：
 
@@ -268,7 +269,16 @@ git rm <file>
 
 
 
-当Git无法自动合并分支时，就必须首先解决冲突。解决冲突后，再提交，合并完成。
+当Git无法自动合并分支时，就必须首先解决冲突。手动编辑冲突文件，选择保留需要的更改。你可以删除冲突标记并修改代码，也可以选择保留目标分支的修改或要合并分支的修改。解决冲突后，git add <冲突文件>，git merge --continue或git commit。
+
+
+
+在解决冲突的过程中不确定如何处理，可以随时使用以下命令取消合并操作：
+
+```
+bashCopy code
+git merge --abort
+```
 
 解决冲突就是把Git合并失败的文件手动编辑为我们希望的内容，再提交。
 
@@ -318,9 +328,9 @@ $ git merge --no-ff -m "merge with no-ff" dev
 
 
 
-![git-br-on-master](learngit.assets/0-20230108165636243.png)
+![git-br-on-master](https://cdn.jsdelivr.net/gh/kintong3000/Kintong-Image-Hosting@main/img/0-20230108165636243.png)
 
-![git-no-ff-mode](learngit.assets/0.png)
+![git-no-ff-mode](https://cdn.jsdelivr.net/gh/kintong3000/Kintong-Image-Hosting@main/img/0.png)
 
 
 
@@ -336,7 +346,7 @@ $ git merge --no-ff -m "merge with no-ff" dev
 
 所以，团队合作的分支看起来就像这样：
 
-![git-br-policy](learngit.assets/0-20230108170002390.png)
+![git-br-policy](https://cdn.jsdelivr.net/gh/kintong3000/Kintong-Image-Hosting@main/img/0-20230108170002390.png)
 
 ##### 缓存分支修改
 
@@ -344,7 +354,7 @@ $ git merge --no-ff -m "merge with no-ff" dev
 
 用`git stash list`命令看存储的工作现场：
 
-```
+```shell
 $ git stash list
 stash@{0}: WIP on dev: f52c633 add merge
 ```
@@ -359,7 +369,7 @@ stash@{0}: WIP on dev: f52c633 add merge
 
 恢复指定的stash，用命令：
 
-```
+```shell
 $ git stash apply stash@{0}
 ```
 

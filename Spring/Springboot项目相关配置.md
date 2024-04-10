@@ -472,7 +472,7 @@ public class CorsFilter extends HttpFilter {
     }
 
 
-}
+} 
 ```
 
 
@@ -974,8 +974,9 @@ public interface UserService extends IService<User> {
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
   //可以使用模版的方法，例：
   
+  
   //public Account findAccountByUsernameOrEamil(String text) {
-  //      return this.query()
+  //      return this.query() //链式查询
   //              .eq("username", text).or()
   //              .eq("email", text).one();
 
@@ -999,3 +1000,77 @@ void contextLoads() {
 
 
 使用IService接口，可以封装了更复杂的业务逻辑，可以将数据库操作与业务逻辑解耦，使代码更具可读性和可维护性。效果一样。。
+
+使用 `IService` 接口相比直接使用 `BaseMapper` 有以下优点：
+
+- **代码抽象层次更高**：在 `UserService` 中可以定义更高层次的业务逻辑，使控制器中的代码更加简洁。
+- **统一管理**：通过 `IService` 统一管理 CRUD 操作，使得业务代码更加规范化。
+- **易于维护和扩展**：当需要添加新的业务逻辑时，只需在服务层进行扩展，而无需修改现有的数据访问代码，提高了代码的可维护性和扩展性。
+
+这样的设计使得业务逻辑与数据访问逻辑分离，提高了代码的可读性和维护性，同时也使得单元测试更加方便。
+
+
+
+
+
+### 分页插件
+
+#### 配置方法
+
+```java
+@Configuration
+@MapperScan("scan.your.mapper.package")
+public class MybatisPlusConfig {
+
+    /**
+     * 添加分页插件
+     */
+    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));//如果配置多个插件,切记分页最后添加
+        //interceptor.addInnerInterceptor(new PaginationInnerInterceptor()); 如果有多数据源可以不配具体类型 否则都建议配上具体的DbType
+        return interceptor;
+    }
+}
+```
+
+#### 使用
+
+``` java
+public IPage<Article> getFrontArticles(Integer current, Integer limit) {
+
+        Page<Article> page = new Page<>(current, limit);//创建page对象，第一个参数为当前页数，第二个参数为每页的数量
+        LambdaQueryWrapper<Article> wrapper = new QueryWrapper<Article>().lambda()
+                .eq(Article::getStatus, PostStatusEnum.PUBLISHED)
+                .eq(Article::getType, Types.POST)
+                .orderByDesc(Article::getPriority, Article::getCreateTime);
+        IPage<Article> result = articleMapper.selectPage(page, wrapper);//得到ipage对象
+
+        result.getRecords().forEach(article -> {
+            String content = DiceUtil.contentTransform(article.getContent(), true, true);
+            article.setContent(content);
+        });
+
+        return result;
+    }
+```
+
+
+
+#### Page对象
+
+> 该类继承了 `IPage` 类，实现了 `简单分页模型` 如果你要实现自己的分页模型可以继承 `Page` 类或者实现 `IPage` 类
+
+|         属性名         |  类型   |  默认值   |                             描述                             |
+| :--------------------: | :-----: | :-------: | :----------------------------------------------------------: |
+|        records         |  List   | emptyList |                         查询数据列表                         |
+|         total          |  Long   |     0     |                       查询列表总记录数                       |
+|          size          |  Long   |    10     |                   每页显示条数，默认 `10`                    |
+|        current         |  Long   |     1     |                            当前页                            |
+|         orders         |  List   | emptyList | 排序字段信息，允许前端传入的时候，注意 SQL 注入问题，可以使用 `SqlInjectionUtils.check(...)` 检查文本 |
+|    optimizeCountSql    | boolean |   true    | 自动优化 COUNT SQL 如果遇到 `jSqlParser` 无法解析情况，设置该参数为 `false` |
+| optimizeJoinOfCountSql | boolean |   true    |         自动优化 COUNT SQL 是否把 join 查询部分移除          |
+|      searchCount       | boolean |   true    | 是否进行 count 查询，如果只想查询到列表不要查询总记录数，设置该参数为 `false` |
+|        maxLimit        |  Long   |           |                       单页分页条数限制                       |
+|        countId         | String  |           | `xml` 自定义 `count` 查询的 `statementId` 也可以不用指定在分页 `statementId` 后面加上 `_mpCount` 例如分页 `selectPageById` 指定 count 的查询 `statementId` 设置为 `selectPageById_mpCount` 即可默认找到该 `SQL` 执行 |
